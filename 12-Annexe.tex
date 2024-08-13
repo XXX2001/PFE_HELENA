@@ -1,0 +1,631 @@
+\chapter{Documentation OMSimulator}
+\label{app:documentation}
+
+
+\section{Vue d'ensemble d'OMSimulator}
+
+\begin{enumerate}
+    \item \textbf{AlgLoop.h} \\
+    \textbf{Rôle :} Ces classes gèrent les boucles algébriques dans la simulation, en s'assurant que les dépendances sont correctement résolues et que les équations du système sont résolues efficacement.
+
+    \item \textbf{BusConnector.h} \\
+    \textbf{Rôle :} Cette classe gère les connexions de bus entre les composants du modèle. Elle gère les interconnexions permettant à différentes parties du modèle de simulation de communiquer entre elles par le biais d'un bus.
+
+    \item \textbf{Clocks.h} \\
+    \textbf{Rôle :} La classe \texttt{Clock} gère les horloges de simulation, essentielles pour synchroniser les événements et les pas de temps pendant le processus de simulation.
+
+    \item \textbf{ComponentFMUCS.h} \\
+    \textbf{Rôle :} Représente les composants FMUs pour la Co-Simulation. Elle gère l'intégration des FMUs qui suivent la norme de Co-Simulation, leur permettant d'interagir dans l'environnement OMSimulator.
+
+    \item \textbf{ComponentFMUME.h} \\
+    \textbf{Rôle :} Semblable à \texttt{ComponentFMUCS}, cette classe représente les composants FMUs mais spécifiquement pour l'échange de modèles. Elle facilite l'intégration et l'interaction des FMUs conçus pour l'échange de modèles dans la simulation.
+
+    \item \textbf{ComponentTable.h} \\
+    \textbf{Rôle :} Gère les composants basés sur des tables dans la simulation. Ces composants utilisent des tables prédéfinies pour leur comportement, offrant un moyen simple d'inclure des tables de correspondance dans la simulation.
+
+    \item \textbf{Connection.h} \\
+    \textbf{Rôle :} La classe \texttt{Connection} gère les connexions entre connecteurs. Elle assure que les données circulent correctement entre les différents composants du modèle, maintenant l'intégrité du réseau de simulation.
+
+    \item \textbf{Connector.h} \\
+    \textbf{Rôle :} Représente les connecteurs des composants, qui sont les points par lesquels les composants interagissent entre eux. Cette classe définit les propriétés et le comportement de ces points d'interaction.
+
+    \item \textbf{DirectedGraph.h} \\
+    \textbf{Rôle :} Ces classes sont utilisées pour représenter et manipuler les graphes orientés dans les modèles de systèmes. Les graphes dirigés sont essentiels pour modéliser les dépendances et les flux de données.
+
+    \item \textbf{ExternalModelInfo.h} \\
+    \textbf{Rôle :} Stocke des informations sur les modèles externes intégrés à l'OMSimulator. Cela comprend les métadonnées et les détails de configuration nécessaires pour utiliser correctement les modèles externes.
+
+    \item \textbf{FMUInfo.h} \\
+    \textbf{Rôle :} Gère les informations liées aux FMUs, y compris leur configuration, leurs paramètres et autres métadonnées. Cette classe est cruciale pour la gestion des FMUs dans la simulation.
+
+    \item \textbf{Logging.h} \\
+    \textbf{Rôle :} Définit les fonctionnalités de journalisation pour OMSimulator. La journalisation est essentielle pour suivre l'exécution des simulations, le débogage et l'analyse des performances.
+
+    \item \textbf{Model.h} \\
+    \textbf{Rôle :} Représente le modèle global dans l'OMSimulator. Cette classe encapsule l'ensemble du modèle de simulation, gérant ses composants, connexions et comportement général.
+
+    \item \textbf{OMSFileSystem.h} \\
+    \textbf{Rôle :} Définit les utilitaires de système de fichiers pour OMSimulator, fournissant des fonctions pour gérer les opérations de fichiers, les répertoires et les chemins, nécessaires pour lire et écrire des données de modèle.
+
+    \item \textbf{OMSString.h} \\
+    \textbf{Rôle :} Définit les utilitaires de chaîne pour OMSimulator, offrant des fonctions pour gérer les opérations de chaîne, les conversions et les manipulations au sein du logiciel de simulation.
+
+    \item \textbf{ResultReader.h} \\
+    \textbf{Rôle :} Lit les résultats de la simulation à partir de fichiers de sortie. Cette classe est responsable de l'analyse et de l'interprétation des données générées par les simulations, les rendant accessibles pour l'analyse et la visualisation.
+
+    \item \textbf{System.h} \\
+    \textbf{Rôle :} Représente les composants systèmes dans le modèle. Cette classe gère la structure hiérarchique de la simulation, permettant des modèles complexes avec plusieurs systèmes imbriqués.
+
+    \item \textbf{SystemSC.h} \\
+    \textbf{Rôle :} Représente les composants système fortement connectés. Ce sont des systèmes où les composants ont des interdépendances fortes, nécessitant une gestion spécialisée dans la simulation.
+
+    \item \textbf{SystemWC.h} \\
+    \textbf{Rôle :} Représente les composants système faiblement connectés. Contrairement aux systèmes fortement connectés, ceux-ci ont des interdépendances plus lâches, permettant différentes stratégies d'optimisation et de simulation.
+
+    \item \textbf{Variable.h} \\
+    \textbf{Rôle :} Gère les variables au sein du modèle, y compris leurs propriétés, valeurs et interactions. Les variables sont fondamentales pour la simulation, représentant l'état et les paramètres des composants du modèle.
+\end{enumerate}
+
+
+\section{Vue d'ensemble de la classe} \label{sec:WC}
+
+La classe \texttt{SystemWC} dans OMSimulator traite les systèmes faiblement couplés (FMU-CS), héritant de la classe \texttt{System}. Elle offre des fonctionnalités pour gérer les solveurs, initialiser le système, gérer les étapes de simulation et interagir avec les fichiers de résultats.
+Un schéma de connections entre cette classe et les autres classes d'OMS est présenté dans la figure \ref{fig:A1}, donnant ainsi une vue globale sur le Fonctionnement de la plateforme.
+
+
+\section{Composants et Méthodes Clés}
+
+\begin{enumerate}
+    \item \textbf{Constructeur et Destructeur}
+    \begin{itemize}
+        \item \textbf{Constructeur}: Initialise un nouvel objet \texttt{SystemWC}, en définissant la méthode de solveur par défaut et en établissant des références au modèle parent et au système.
+        \item \textbf{Destructeur}: Assure un nettoyage adéquat lorsque un objet \texttt{SystemWC} est détruit.
+    \end{itemize}
+
+    \item \textbf{Méthode de Fabrique}
+    \begin{itemize}
+        \item \textbf{NewSystem}: Crée une nouvelle instance de \texttt{SystemWC}. Elle valide l'identifiant et s'assure que le modèle parent ou le système soit fourni, mais pas les deux.
+    \end{itemize}
+
+    \item \textbf{Méthodes de Solveur}
+    \begin{itemize}
+        \item \textbf{getSolverName}: Renvoie le nom de la méthode de solveur actuelle sous forme de chaîne.
+        \item \textbf{setSolverMethod}: Définit la méthode de solveur en fonction de la chaîne fournie, prenant en charge plusieurs types de solveurs (par exemple, \texttt{oms-ma}, \texttt{oms-mav}).
+    \end{itemize}
+
+    \item \textbf{Importation/Exportation d'Informations de Simulation}
+    \begin{itemize}
+        \item \textbf{exportToSSD\_SimulationInformation}: Exporte les informations de simulation vers un nœud XML SSD (Description de la Structure du Système), incluant des détails sur la méthode de solveur et ses paramètres.
+        \item \textbf{importFromSSD\_SimulationInformation}: Importe les informations de simulation à partir d'un nœud XML SSD, définissant la méthode de solveur et ses paramètres en conséquence.
+    \end{itemize}
+
+    \item \textbf{Méthodes de Cycle de Vie du Système}
+    \begin{itemize}
+        \item \textbf{instantiate}: Prépare le système pour la simulation en initialisant tous les sous-systèmes et composants.
+        \item \textbf{initialize}: Initialise le système, met à jour les graphes de dépendances et prépare les structures de données pour la simulation.
+        \item \textbf{terminate}: Met fin à tous les sous-systèmes et composants, garantissant que les ressources sont correctement nettoyées.
+        \item \textbf{reset}: Réinitialise le système et ses composants à leur état initial, prêts pour un nouveau cycle de simulation.
+    \end{itemize}
+
+    \item \textbf{Méthodes d'Étape de Simulation}
+    \begin{itemize}
+        \item \textbf{doStep}: Fait avancer la simulation d'une étape, en implémentant différentes algorithmes basés sur la méthode de solveur. Elle gère les tailles de pas adaptatives et la vérification des erreurs.
+        \item \textbf{stepUntil}: Fait avancer la simulation jusqu'à un temps d'arrêt spécifié, en appelant répétitivement \texttt{doStep} selon les besoins.
+        \item \textbf{stepUntilASSC}: Traitement spécial pour la méthode \texttt{oms\_solver\_wc\_assc}, incluant la détection et la gestion des événements.
+    \end{itemize}
+
+    \item \textbf{Méthodes Auxiliaires}
+    \begin{itemize}
+        \item \textbf{getMaxOutputDerivativeOrder}: Renvoie l'ordre le plus élevé de dérivées de sortie parmi les composants du système.
+        \item \textbf{getRealOutputDerivative}: Récupère la dérivée de sortie réelle pour un signal spécifié.
+        \item \textbf{setRealInputDerivative}: Définit la dérivée d'entrée réelle pour un signal spécifié.
+        \item \textbf{registerSignalsForResultFile}: Enregistre les signaux du système avec le fichier de résultats pour enregistrer les sorties de simulation.
+        \item \textbf{updateSignals}: Met à jour le fichier de résultats avec les valeurs actuelles des signaux du système.
+    \end{itemize}
+
+    \item \textbf{Gestion des Entrées/Sorties}
+    \begin{itemize}
+        \item \textbf{getInputs}: Récupère les valeurs d'entrée pour le système en se basant sur le graphe dirigé des dépendances.
+        \item \textbf{setInputsDer}: Définit les dérivées d'entrée pour le système.
+        \item \textbf{updateInputs}: Met à jour les entrées du système en fonction du graphe dirigé, garantissant une propagation correcte des valeurs à travers le système.
+        \item \textbf{getinputs2}: Récupère un vecteur d'entrées en tenant compte des boucles algébriques au sein du système.
+        \item \textbf{updateinputs2}: Met à jour les entrées du système tout en tenant compte des boucles algébriques, garantissant la cohérence.
+    \end{itemize}
+
+    \item \textbf{Méthodes Utilitaires}
+    \begin{itemize}
+        \item \textbf{vectorToString}: Convertit un vecteur en sa représentation en chaîne pour la journalisation ou le débogage.
+        \item \textbf{matrixToString}: Convertit une matrice en sa représentation en chaîne pour la journalisation ou le débogage.
+    \end{itemize}
+
+\end{enumerate}
+
+
+
+\section{Gestion des boucles algébriques}
+
+Les classes \texttt{oms::System} et \texttt{oms::AlgLoop} gèrent les boucles algébriques en utilisant différentes méthodes de résolution dans un cadre de simulation. Le code inclut des méthodes pour résoudre les boucles algébriques en utilisant l'itération de point fixe et le solveur KINSOL, ainsi que des fonctionnalités pour récupérer et définir des données de simulation, et logger les statuts et erreurs du système. Voici un résumé des fonctionnalités clés :
+
+\subsection*{Méthodes de classe :}
+\begin{itemize}
+    \item \textbf{solveAlgLoop(DirectedGraph\& graph, int loopNumber, std::vector<double>* additionalData)} : Cette méthode redirige la résolution d'une boucle algébrique vers l'objet \texttt{AlgLoop} respectif.
+    \item \textbf{solveAlgLoop(System\& syst, DirectedGraph\& graph, std::vector<double>* additionalData)} : Implémentée dans la classe \texttt{oms::AlgLoop}, cette méthode décide de la méthode de solveur en fonction de \texttt{algSolverMethod} et gère la boucle en conséquence.
+    \item \textbf{fixPointIteration(System\& syst, DirectedGraph\& graph, additionalData)} : Cette méthode tente de résoudre la boucle en utilisant une approche d'itération de point fixe, mettant à jour et vérifiant les résidus pour la convergence.
+
+\end{itemize}
+
+\subsection*{Stratégies de solveur :}
+\begin{itemize}
+    \item \textbf{Itération de point fixe} : Vise à résoudre en ajustant itérativement les valeurs jusqu'à ce que les sorties se stabilisent dans des résidus acceptables.
+    \item \textbf{KINSOL} : Utilise le solveur KINSOL de la suite SUNDIALS, généralement utilisé pour des systèmes algébriques plus complexes nécessitant des solveurs non linéaires robustes.
+\end{itemize}
+
+\subsection*{Gestion des erreurs et logging :}
+\begin{itemize}
+    \item Utilisation extensive du logging pour déboguer et suivre la progression de la résolution des boucles algébriques.
+    \item La gestion des erreurs est mise en œuvre pour gérer les situations où la méthode de solveur est invalide ou où le nombre maximal d'itérations est dépassé.
+\end{itemize}
+
+\subsection*{Interaction système :}
+\begin{itemize}
+    \item Le code gère les états du système en récupérant et en définissant les valeurs réelles basées sur les connexions des nœuds du graphe dirigé, facilitant l'interaction dynamique au sein des composants de simulation.
+\end{itemize}
+
+\subsection*{Efficacité de l'algorithme et contrôle :}
+\begin{itemize}
+    \item L'implémentation vérifie le nombre d'itérations par rapport à un maximum prédéfini pour éviter les boucles infinies et assurer l'efficacité computationnelle.
+\end{itemize}
+
+Cette structure de code est robuste pour les environnements de simulation modulaires où différentes boucles algébriques peuvent être abordées avec des solveurs appropriés, et elle garantit que chaque partie du système peut être individuellement adressée et gérée pendant le processus de simulation.
+
+\section{Analyse Détaillée des Méthodes Principales}
+
+\subsection*{Constructeur et Destructeur}
+Le constructeur initialise l'instance de \texttt{SystemWC} avec des références à son modèle parent et au système, en définissant la méthode de solveur par défaut. Le destructeur assure que toutes les ressources allouées par le \texttt{SystemWC} sont correctement nettoyées lorsque l'objet est détruit.
+
+\subsection*{Méthodes de Solveur}
+La méthode \texttt{getSolverName} renvoie le nom de la méthode de solveur actuelle basée sur la valeur enum du solveur. La méthode \texttt{setSolverMethod} permet de définir la méthode de solveur en faisant correspondre une chaîne fournie aux méthodes de solveur prises en charge et en mettant à jour l'état interne du solveur en conséquence.
+
+\subsection*{Importation/Exportation d'Informations de Simulation}
+La méthode \texttt{exportToSSD\_SimulationInformation} sérialise la configuration actuelle du solveur et les paramètres dans un nœud XML SSD pour la persistance ou l'interopérabilité. La méthode \texttt{importFromSSD\_SimulationInformation} désérialise la configuration du solveur à partir d'un nœud XML SSD, garantissant que le système est configuré correctement en fonction des données importées.
+
+\subsection*{Méthodes de Cycle de Vie du Système}
+La méthode \texttt{instantiate} prépare tous les sous-systèmes et composants pour la simulation en les initialisant. La méthode \texttt{initialize} met à jour les graphes de dépendances, initialise les entrées et met en place les structures de données nécessaires pour la simulation. La méthode \texttt{terminate} assure l'arrêt soigné de tous les sous-systèmes et composants, veillant à ce qu'ils soient correctement fermés. Quant à la méthode \texttt{reset}, elle réinitialise l'ensemble du système à son état initial, le préparant ainsi pour un nouveau cycle de simulation.
+
+\subsection*{Méthodes d'Étape de Simulation}
+La méthode \texttt{doStep} fait avancer la simulation d'une étape, utilisant différents algorithmes basés sur la méthode de solveur actuelle. Elle comprend la gestion des tailles de pas adaptatives et la vérification des erreurs. La méthode \texttt{stepUntil} fait avancer la simulation jusqu'à un temps d'arrêt spécifié, en appelant répétitivement \texttt{doStep} et en mettant à jour l'état de la simulation.
+
+
+\subsection*{Gestion des Entrées/Sorties}
+La méthode \texttt{getInputs} récupère les valeurs d'entrée du système en se basant sur le graphe dirigé des dépendances, les préparant pour une utilisation dans la simulation. La méthode \texttt{setInputsDer} définit les dérivées d'entrée pour le système, permettant une gestion dynamique des entrées. La méthode \texttt{updateInputs} met à jour les entrées du système en fonction du graphe dirigé, garantissant que les valeurs sont propagées correctement. La méthode \texttt{getinputs2} récupère des entrées tout en tenant compte des boucles algébriques, garantissant la cohérence dans les systèmes avec des boucles de rétroaction. La méthode \texttt{updateinputs2} met à jour les entrées tout en tenant compte des boucles algébriques, garantissant que l'état du système reste cohérent.
+\newpage
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{classoms_1_1SystemWC__coll__graph.png}
+    \caption{Diagramme de connections de la classe SystemWC }
+    \label{fig:A1}
+\end{figure}
+
+\newpage
+
+\begin{table}[hbt!]
+    \caption{Script d'un scénario de co-simulation}
+    \begin{lstlisting}[style=vscode, language=python]
+from OMSimulator import OMSimulator
+
+oms = OMSimulator()
+oms.setTempDirectory("./temp/")
+oms.setLoggingLevel(2)        
+oms.newModel("model_wc")
+        
+oms.addSystem("model_wc.root", oms.system_wc)
+oms.setResultFile('model_wc', 'DifferenceAmplifier.csv')   
+
+# Add sub models for System1.fmu and System2.fmu
+oms.addSubModel("model_wc.root.system1", "~/DifferenceAmplifierLeft.fmu")
+oms.addSubModel("model_wc.root.system2", "~/DifferenceAmplifierRight.fmu")
+        
+# Add connections between System1 and System2
+oms.addConnection("model_wc.root.system1.vout", "model_wc.root.system2.vin")
+oms.addConnection("model_wc.root.system1.iin", "model_wc.root.system2.iout")
+        
+ # Set Simulation settings (tolerance 1e-6)
+oms.setTolerance('model_wc', 1e-6, 1e-6)
+oms.setSolver('model_wc', oms.solver_wc_mav)
+oms.setVariableStepSize('model_wc', 1e-3, 1e-6,1e-1)
+oms.setStopTime('model_wc', 10)
+        
+# Logging setup
+oms.setLogFile("~/test.log")
+        
+# instantiate and set start values to variables
+oms.instantiate('model_wc')
+        
+# Initialize, simulate and terminate the model
+oms.initialize("model_wc")
+oms.simulate("model_wc")
+oms.terminate("model_wc")
+oms.delete("model_wc")    
+        \end{lstlisting}
+        \label{tab:A2}
+\end{table}
+\newpage
+
+\begin{table}[hbt!]
+    \caption{Script de génération d'un FMU à l'aide de pythonfmu}
+    \begin{lstlisting}[style=vscode, language=python]
+from pythonfmu import Fmi2Causality, Fmi2Variability, Fmi2Slave, Real
+import math
+
+class Source(Fmi2Slave):
+
+def __init__(self, **kwargs):
+    super().__init__(**kwargs)
+    self.Vmax = 10.0
+    self.i1 = 0.0
+    self.v1 = self.Vmax
+    self.Vt = 0.0
+    self.R = 10000.
+    self.register_variable(Real("Vmax", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+    self.register_variable(Real("i1", causality=Fmi2Causality.input))
+    self.register_variable(Real("R", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+    self.register_variable(Real("Vt", causality=Fmi2Causality.local, variability=Fmi2Variability.tunable))
+    self.register_variable(Real("v1", causality=Fmi2Causality.output))
+
+def do_step(self, current_time, step_size):
+    self.Vt = self.Vmax * math.cos(current_time+step_size)
+    self.v1 = self.Vt - self.i1*self.R
+return True
+        \end{lstlisting}
+        \label{tab:A3}
+\end{table}
+
+\newpage
+
+\begin{table}[hbt!]
+    \label{tab:A4}
+    \caption{Pseudo-algorithme}
+    \begin{algorithm}[H]
+        \KwResult{Do-simulation avec ajustement dynamique de la taille de pas utilisant 'oms\_solver\_wc\_mav'}
+        \SetKwProg{Fn}{Fonction}{:}{}
+        \SetKwFunction{FStepSimulation}{EtapeSimulation}
+        \SetKwFunction{FAdjustStepSize}{AjusterTailleDePas}
+        \SetKwFunction{FSaveState}{SauvegarderEtat}
+        \SetKwFunction{FRollbackState}{RestaurerEtat}
+        
+        \Fn{\FStepSimulation{FMUs, time, stepSize, maxTime}}{
+            $tNext \leftarrow time + stepSize$\;
+            \If{$tNext > maxTime$}{
+                $tNext \leftarrow maxTime$\;
+                $stepSize \leftarrow tNext - time$\;
+            }
+            \ForEach{FMU dans FMUs}{
+                FMU.\FSaveState{}\;
+                \If{non FMU.stepUntil($tNext$)}{
+                    \KwRet Faux\;
+                }
+            }
+            \KwRet Vrai\;
+        }
+        
+        \Fn{\FAdjustStepSize{inputVect, outputVect, maxError, safetyFactor}}{
+            $error \leftarrow \text{calculer l'erreur entre } inputVect \text{ et } outputVect$\;
+            $normError \leftarrow \text{calculer la norme de } error$\;
+            \If{$normError > maxError$}{
+                $stepSize \leftarrow stepSize \times (\text{safetyFactor} \times \text{pow}(1.0 / normError, 0.5))$\;
+                \If{$stepSize < minimumStepSize$}{
+                    $stepSize \leftarrow minimumStepSize$\;
+                }
+                \FRollbackState{FMUs}\;
+                \KwRet Faux\;
+            }
+            \KwRet Vrai\;
+        }
+        
+        \Fn{\FSaveState{FMUs}}{
+            \ForEach{FMU dans FMUs}{
+                FMU.saveState()\;
+            }
+        }
+        
+        \Fn{\FRollbackState{FMUs}}{
+            \ForEach{FMU dans FMUs}{
+                FMU.restoreState()\;
+            }
+        }
+        
+        \While{$time < maxTime$}{
+            \eIf{\FStepSimulation{FMUs, time, stepSize, maxTime}}{
+                \If{\FAdjustStepSize{inputVect, outputVect, maxError, safetyFactor}}{
+                    $time \leftarrow tNext$\;
+                }
+                \Else{
+                    Continue la boucle avec la taille de pas ajustée\;
+                }
+            }{
+                \KwRet{Faux, time}\;
+            }
+        }
+        \KwRet{Vrai, time}\;
+    \end{algorithm}
+\end{table}
+\newpage
+
+\begin{table}[hbt!]
+    \caption{Pseudo-algorithme}\label{tab:A6}
+
+\begin{algorithm}[H]
+    \KwResult{Exécuter une simulation avec une méthode à pas fixe utilisant `oms\_solver\_wc\_ma`}
+    \SetKwProg{Fn}{Fonction}{:}{}
+    \SetKwFunction{FSimulateStep}{SimulerEtape}
+    \SetKwFunction{FSaveState}{SauvegarderEtat}
+    \SetKwFunction{FUpdateInputs}{MettreAJourEntrées}
+    \SetKwFunction{FGetInputs}{ObtenirEntrées}
+    \SetKwFunction{FSetInputsDer}{DéfinirDérivéesEntrées}
+    \SetKwFunction{FRestoreState}{RestaurerEtat}
+
+    \Fn{\FSimulateStep{time, maximumStepSize, stopTime}}{
+        $tNext \leftarrow time + maximumStepSize$\;
+        \If{$tNext > stopTime$}{
+            $tNext \leftarrow stopTime$\;
+        }
+        $h \leftarrow tNext - time$\;
+
+        \If{masiMax > 1}{
+            \For{component \textbf{in} getComponents()}{
+                component.\FSaveState{}\;
+            }
+        }
+        \FGetInputs{eventGraph, inputVect1}\;
+        \For{masi \textbf{from} 0 \textbf{to} masiMax - 1}{
+            \eIf{useThreadPool()}{
+                \textbf{Parallel execution of subsystems and components using thread pool}\;
+            }{
+                \textbf{Serial execution of subsystems and components}\;
+            }
+            \If{masi < masiMax - 1}{
+                \FUpdateInputs{eventGraph}\;
+                \FGetInputs{eventGraph, inputVect2}\;
+                inputDer.clear()\;
+                \For{inputI \textbf{from} 0 \textbf{to} inputVect1.size() - 1}{
+                    inputDer.push\_back((inputVect2[inputI] - inputVect1[inputI]) / h)\;
+                }
+                \For{component \textbf{in} getComponents()}{
+                    component.\FRestoreState{}\;
+                }
+                \FSetInputsDer{eventGraph, inputDer}\;
+            }
+            \Else{
+                $time \leftarrow tNext\;$
+                \FUpdateInputs{eventGraph}\;
+
+            }
+        }
+        \KwRet oms\_status\_ok\;
+    }
+\end{algorithm}
+\end{table}
+
+\newpage
+
+\begin{table}[hbt!]
+    \caption{Pseudo-algorithme}\label{tab:A6}
+
+\begin{algorithm}[H]
+    \KwResult{Run a dynamic step-size simulation using}
+    \SetKwProg{Fn}{Function}{:}{end}
+    \SetKwFunction{FMain}{Main}
+    \SetKwFunction{FStepUntil}{StepUntil}
+    \SetKwFunction{FSaveState}{SaveState}
+    \SetKwFunction{FRestoreState}{RestoreState}
+    \SetKwFunction{FUpdateInputs}{UpdateInputs}
+    \SetKwFunction{FEmit}{Emit}
+    \SetKwFunction{FSetFmuTime}{SetFmuTime}
+    \SetKwFunction{FGetInputs}{GetInputs}
+    \SetKwFunction{FLogDebug}{LogDebug}
+    \SetKwFunction{FCalculateError}{CalculateError}
+    
+
+        Initialize simulation parameters\;
+        \While{time $<$ stopTime}{
+            $tNext \leftarrow time + stepSize$\;
+            \If{$tNext >$ stopTime}{
+                $tNext \leftarrow$ stopTime\;
+                $stepSize \leftarrow tNext - time$\;
+            }
+            \ForEach{component in FMU components}{
+                component.\FSaveState{}\;
+            }
+            $iterationNum \leftarrow 0$\;
+            \While{$iterationNum < 100$}{
+                \FGetInputs{eventGraph, inputVector}\;
+                \FStepUntil{tNext}\;
+                \FGetInputs{eventGraph, outputVector}\;
+                $error \leftarrow$ \FCalculateError{inputVector, outputVector}\;
+                \FLogDebug{Error calculation and logging}\;
+                \If{$error <$ tolerance}{
+                    \FUpdateInputs{eventGraph, outputVector}\;
+                    \FEmit{time, true}\;
+                    \FLogDebug{Convergence achieved, updating and emitting}\;
+                    break\;
+                }
+                \FLogDebug{Preparing for next iteration}\;
+                $iterationNum \leftarrow iterationNum + 1$\;
+            }
+            \If{error $\geq$ tolerance}{
+                \FRestoreState{FMU components}\;
+                \FLogDebug{Restoring state due to non-convergence}\;
+                Reduce $stepSize$\;
+            }
+            time $\leftarrow tNext$\;
+            \FSetFmuTime{FMU components, time}\;
+        }
+        \FLogDebug{End of simulation}\;
+\end{algorithm}
+\end{table}
+    
+\newpage
+\begin{lstlisting}[style=vscode, language=python, label={tab:A7},caption={méta-modèle d'une plateforme de co-simulation}]
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor
+import matplotlib.pyplot as plt
+import pandas as pd
+
+class CoSimulation:
+    def __init__(self, A, B, initial_state, t_final, dt, max_iter=100, tol=0.000001):
+        self.A = A
+        self.B = B
+        self.state = initial_state
+        self.t_final = t_final
+        self.dt = dt
+        self.max_iter = max_iter
+        self.tol = tol
+        self.time = 0
+        self.history = []
+        self.original_dt = dt
+
+    def initialize(self, initial_time, initial_state):
+        self.time = initial_time
+        self.state = initial_state
+        self.history = [(self.time, self.state.copy())]
+        print(f"Initialized simulation at time {self.time} with state {self.state}")
+
+    def do_step(self):
+        # Store the previous state and time in case of rollback
+        prev_state = self.state.copy()
+        prev_time = self.time
+
+        # Update S with the current time
+        S = np.array([0.0, 10 * np.cos(self.time +dt)])
+        print(f"Time {self.time:.4f}: Computing next state with X = {self.state}")
+
+        # Use Aitken-Schwarz method with acceleration to compute the next state
+        converged, self.state = aitken_schwarz_with_acceleration(self.A, self.B, S, self.state, self.max_iter, self.tol)
+        
+        if not converged :
+            if self.dt / 10 >= min_dt:
+                print(f"Max iterations exceeded or result not within tolerance. Rolling back and reducing timestep from {self.dt} to {self.dt / 10}.")
+                self.state = prev_state
+                self.time = prev_time
+                self.dt /= 10
+                self.do_step()  # Recursive call with reduced timestep
+            else:
+                raise RuntimeError("Minimum timestep reached. Convergence not achieved.")
+        else:
+            self.time += self.dt
+            self.history.append((self.time, self.state.copy()))
+            print(f"Time {self.time:.4f}: Updated state to {self.state}")
+            if self.dt != self.original_dt:
+                print(f"Convergence achieved. Resetting timestep to original value {self.original_dt}.")
+                self.dt = self.original_dt
+
+    def run_simulation(self):
+        while self.time < self.t_final:
+            self.do_step()
+        print("Simulation complete.")
+
+    def save_results_to_csv(self, filename):
+        times = [t for t, _ in self.history]
+        states = np.array([state for _, state in self.history])
+        data = {'Time': times}
+        for i in range(states.shape[1]):
+            data[f'State {i}'] = states[:, i]
+        df = pd.DataFrame(data)
+        df.to_csv(filename, index=False)
+        print(f"Results saved to {filename}")
+
+# Function to compute X_i[n+1]^(m+1)
+def compute_X_i(i, A, B, S, X_curr, X_next, n):
+    Aii_inv = 1 / A[i, i]
+    sum_BX = np.sum(B[i, :] * X_curr)
+    sum_A_lower = np.sum(A[i, :i] * X_next[:i])
+    sum_A_upper = np.sum(A[i, i+1:] * X_next[i+1:])
+    return Aii_inv * (sum_BX - sum_A_lower - sum_A_upper + S[i])
+
+# Function for one Schwarz iteration
+def schwarz_iterate(A, B, S, X, X_next, n):
+    with ThreadPoolExecutor(max_workers=n) as executor:
+        futures = [
+            executor.submit(compute_X_i, i, A, B, S, X, X_next, n)
+            for i in range(n)
+        ]
+        for i, future in enumerate(futures):
+            X_next[i] = future.result()
+    return X_next
+# Function to perform the Aitken-Schwarz method with Aitken acceleration
+def aitken_schwarz_with_acceleration(A, B, S, X, max_iter=100, tol=0.000001):
+    n = len(X)
+    errors = []
+    iter_num = 0
+    P_saved = None
+    # Perform the first double iteration to get initial X and X_next
+    initial_X = X.copy()
+    while iter_num < max_iter:
+        print(f"Iteration {iter_num + 1}: Starting with X = {X} ")
+        X_next = X.copy()
+        X_next1 = schwarz_iterate(A, B, S, X, X_next, n)
+        X_next = schwarz_iterate(A, B, S, X, X_next1, n)
+        iter_num += 1
+        # Compute error
+        err = X_next - X
+        errors.append(err)
+        print(f"Iteration {iter_num}: Error = {np.linalg.norm(err)}")
+        if np.linalg.norm(err) > tol :
+        # Perform Aitken acceleration if we have enough errors
+            if len(errors) > n :
+                if P_saved is None:  # Calculate P matrix if not saved
+                    err_matrix = np.column_stack(errors[-n:])
+                    err_matrix_prev = np.column_stack(errors[-(n+1):-1])
+
+                    try:
+                        P = np.dot(err_matrix, np.linalg.inv(err_matrix_prev))
+                        P_saved = P  # Save P matrix
+                    except np.linalg.LinAlgError:
+                    # If the matrix inversion fails, skip Aitken acceleration for this iteration
+                        print(f"Iteration {iter_num}: Aitken acceleration skipped due to LinAlgError")
+                        P_saved = None
+                        continue
+            # Generalized Aitken formula
+                I = np.eye(n)
+                try:
+                # Calculate X_next_inf using the original X_next and X from iteration 0
+                    X_next_inf = np.dot(np.linalg.inv(I - P_saved), (X_next - np.dot(P_saved, initial_X)))
+                    print(f"Iteration {iter_num}: Aitken acceleration applied")
+                # Check for convergence
+                    final_error = np.linalg.norm(X_next_inf - initial_X)
+                    print(f"Iteration {iter_num}: Final error after Aitken acceleration = {final_error}")
+                    if final_error < tol:
+                        return True, X_next_inf
+                    else:
+                        print(f"Iteration {iter_num}: Final error not within tolerance, recalculating P matrix.")
+                        P_saved = None  # Erase saved P matrix
+                except np.linalg.LinAlgError:
+                # If the matrix inversion fails, skip this step
+                    print(f"Iteration {iter_num}: Aitken acceleration skipped due to LinAlgError")
+                    P_saved = None
+            else:
+                iter_num += 1
+                X = X_next
+        else : 
+            return True, X_next
+    print(f"Exceeded maximum Schwarz iterations ({max_iter}) without convergence.")
+    return False, X
+# Example usage
+n = 2
+Zs = 0.001  # Example value for Zs  
+L = 0.0000007   # Example value for L
+dt = 0.002  # Time step size
+T = 10  # Total time for simulation
+min_dt = 0.000002  # Minimum step size
+A = np.array([[1, 0],[Zs, 1]])
+B = np.array([[1, -dt/L],[0, 0]])
+initial_state = np.array([0.0, 0.0])
+t_final = 10
+cosim = CoSimulation(A, B, initial_state, t_final, dt)
+cosim.initialize(0, initial_state)
+cosim.run_simulation()
+cosim.save_results_to_csv('cosimulation_results.csv')
+\end{lstlisting}
+
+\newpage

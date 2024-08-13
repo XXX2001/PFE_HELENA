@@ -1,0 +1,73 @@
+\documentclass[a4paper,12pt]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{xcolor,graphicx}
+\usepackage[top=0.6in,bottom=0.6in,right=1in,left=1in]{geometry}
+\usepackage{fontspec}
+\newlength\figureheight{}
+\newlength\figurewidth{}
+\usepackage[pages=some, placement=center]{background}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \begin{minipage}{10cm}
+    \begin{flushleft}
+      \includegraphics[width=9cm]{images_pfe/eupi_long.jpg}
+    \end{flushleft}
+  \end{minipage}\hfill
+  \begin{minipage}{5cm}
+    \begin{flushright}
+      \includegraphics[width=5cm]{images_pfe/cap-logo.png}
+    \end{flushright}
+  \end{minipage}\hfill\\
+  \vspace{20mm}
+  {\large \bfseries MEMOIRE DE STAGE}\\[0.5cm]
+  {\large 2\textsuperscript{ème} année de Master mention Automatique Robotique}\\[0.5cm]
+  {\large \bfseries{Option: Mécatronique} \\ }
+  \vspace{20mm}
+  % Title
+  \rule{\linewidth}{0.3mm} \\[0.4cm]
+  { \huge \bfseries Conception d'une plateforme de co-simulation basée sur le standard FMI \\[0.4cm] }
+  \rule{\linewidth}{0.3mm} \\[0.3cm]
+
+  \vspace{20mm}
+
+  % Author and supervisor
+  \noindent
+  \begin{minipage}[t]{0.4\textwidth}
+    \begin{flushleft} \large
+      \emph{Réalisé par: }\\
+      M. \textsc{EL AMRANI} Mouad \\
+    \end{flushleft}
+  \end{minipage}
+  \begin{minipage}[t]{0.55\textwidth}
+    \begin{flushright} \large
+      \begin{flushleft} \large
+        \emph{Encadré par: } \\
+        Mme. \textsc{SHOURICK} Hélèna  (Cap)\\
+        M. \textsc{CHATEAU} Thierry (UCA)\\
+
+      \end{flushleft}
+
+    \end{flushright}
+  \end{minipage}\\[1cm]
+  \vspace{10mm}
+
+  {\large \textit{Soutenu le 03 Septembre 2024, Devant le jury composé de: }}\\[0.5cm]
+
+  \centering
+  \begin{tabular}{lll}
+    \large M. TRASSOUDAINE \textsc{Laurent} : & \large EUPI & \large - Jury \\[0.1cm]
+    \large M. CHATEAU \textsc{Thierry}     :   & \large UCA & \large - Encadrant académique  \\[0.1cm]
+    \large Mme. SHOURICK \textsc{Hélèna}     :   & \large Capgemini & \large - Encadrant professionnel \\[0.1cm]
+
+  \end{tabular}
+
+  \vspace{15mm}
+  % Bottom of the page
+  {\large Promotion: 2023/2024}
+
+\end{titlepage}
+\end{document}

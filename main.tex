@@ -1,0 +1,335 @@
+\documentclass[a4paper,12pt]{report}
+\usepackage{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french, arabic]{babel} % If you write in French
+\usepackage{a4wide}
+\usepackage[framed,numbered,autolinebreaks,useliterate]{mcode}
+\usepackage{graphicx}
+\usepackage{placeins}
+%pour la mise en page des tableaux
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\definecolor{darkgrey}{RGB}{45,45,45}
+\definecolor{yellow}{RGB}{255,193,7}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{array} % for extrarowheight
+\usepackage{lscape}
+\usepackage{afterpage}
+\usepackage{rotating}
+\usepackage[nottoc,notlof,notlot]{tocbibind}
+\usepackage{tocloft}
+\usepackage{pdfpages}
+\usepackage{microtype}
+
+\graphicspath{{images/}{images_pfe/}}
+\newlength\figureheight
+\newlength\figurewidth
+\usepackage{ifthen}
+\usepackage{ifpdf}
+
+\usepackage{hyperref}
+\hypersetup{%
+colorlinks=true,
+linkcolor=blue,
+citecolor=green,
+urlcolor=blue}
+% \urlstyle{same}
+\usepackage{standalone}
+\usepackage{import}
+
+
+
+
+
+
+
+
+
+\usepackage[top=2.5cm,bottom=2.5cm,right=2.5cm,left=2.5cm]{geometry}
+\usepackage{changepage}
+\usepackage{tikz}
+\definecolor{Gray}{gray}{0.9}
+\definecolor{LightCyan}{rgb}{0.88,1,1}
+\usetikzlibrary{matrix,fit,backgrounds,arrows,shapes,positioning,shadows,trees,quotes}
+
+
+\tikzset{
+  basic/.style  = {draw, text width=2cm, drop shadow, font=\sffamily, rectangle},
+  root/.style   = {basic, rounded corners=2pt, thin, align=center,
+                   fill=yellow!30},
+  level 2/.style = {basic, rounded corners=6pt, thin,align=center, fill=green!40,
+                   text width=8em},
+  level 3/.style = {basic, thin, align=left, fill=blue!25, text width=6.5em},
+  level 4/.style = {basic, ellipse, thin , align=center, fill=pink!40, text width = 4em},
+}
+\usepackage{tabularx}
+    \newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\usepackage{longtable}
+
+\usepackage{xltabular}
+\renewcommand{\tablename}{Tableau}
+\renewcommand{\figurename}{Figure}
+
+
+
+%pour les références bibliographiques
+\usepackage{cite}
+
+%% pour la numération des sous sou sections
+
+
+
+% pour les algorithmes
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\DontPrintSemicolon
+
+\setlength\arrayrulewidth{1pt}
+\renewcommand{\baselinestretch}{1.05}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\bfseries\nouppercase{\leftmark}}
+\rfoot{\bfseries\thepage}
+\setlength{\headheight}{14.5pt}
+
+\let\headruleORIG\headrule
+
+\renewcommand{\headrule}{\color{black} \headruleORIG}
+\renewcommand{\headrulewidth}{1.0pt}
+\usepackage{colortbl}
+\arrayrulecolor{black}
+
+\fancypagestyle{plain}{
+  \fancyhead{}
+  \fancyfoot[R]{\bfseries\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+
+
+\makeatletter
+\def\@textbottom{\vskip \z@ \@plus 1pt}
+\let\@texttop\relax
+\makeatother
+
+\makeatletter
+\def\cleardoublepage{\clearpage\if@twoside \ifodd\c@page\else%
+  \hbox{}%
+  \thispagestyle{empty}%
+  \newpage%
+  \if@twocolumn\hbox{}\newpage\fi\fi\fi}
+\makeatother
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bbm}
+\usepackage{array}
+\usepackage{bm}
+\usepackage{multirow}
+\usepackage[footnote]{acronym}
+
+\usepackage[bottom]{footmisc}
+
+\usepackage{listings}
+
+\lstdefinestyle{vscode}{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{white},
+  keywordstyle=\color{yellow},
+  commentstyle=\color{green!50!black},
+  stringstyle=\color{orange},
+  identifierstyle=\color{black},
+  numbers=left,
+  numberstyle=\tiny\color{black},
+  tabsize=2,
+  frame=single,
+  rulecolor=\color{lightgray},
+  breaklines=true,
+  showstringspaces=false,
+  captionpos=b,
+  extendedchars=true,
+  aboveskip=1em,
+  belowskip=1em,
+  xleftmargin=1em,
+  framexleftmargin=1em,
+  escapeinside={(*@}{@*)},
+  language=Python,
+  literate=
+    {*}{{\textcolor{blue}{*}}}1
+    {-}{{\textcolor{blue}{-}}}1
+    {+}{{\textcolor{blue}{+}}}1
+    {/}{{\textcolor{blue}{/}}}1
+    {=}{{\textcolor{blue}{=}}}1
+    {>}{{\textcolor{blue}{>}}}1
+    {<}{{\textcolor{blue}{<}}}1
+    {;}{{\textcolor{blue}{;}}}1
+    {,}{{\textcolor{blue}{,}}}1
+    {\{}{{\textcolor{blue}{\{}}}1
+    {\}}{{\textcolor{blue}{\}}}}1
+    {[}{{\textcolor{blue}{[}}}1
+    {]}{{\textcolor{blue}{]}}}1
+    {(}{{\textcolor{blue}{(}}}1
+    {)}{{\textcolor{blue}{)}}}1
+}
+%table break line
+
+\usepackage{makecell}
+\usepackage{xcolor,colortbl}
+
+\renewcommand\theadalign{bl}
+\renewcommand\theadfont{\bfseries}
+\renewcommand\cellalign{bl}
+\renewcommand\cellgape{\Gape[2pt]}
+
+\parskip=5pt
+%\sloppy
+ %%%%********************************************************************
+\definecolor{quotemark}{gray}{0.7}
+\makeatletter
+\def\fquote{%
+    \@ifnextchar[{\fquote@i}{\fquote@i[]}%]
+           }%
+\def\fquote@i[#1]{%
+    \def\tempa{#1}%
+    \@ifnextchar[{\fquote@ii}{\fquote@ii[]}%]
+                 }%
+\def\fquote@ii[#1]{%
+    \def\tempb{#1}%
+    \@ifnextchar[{\fquote@iii}{\fquote@iii[]}%]
+                      }%
+\def\fquote@iii[#1]{%
+    \def\tempc{#1}%
+    \vspace{1em}%
+    \noindent%
+    \begin{list}{}{%
+         \setlength{\leftmargin}{0.1\textwidth}%
+         \setlength{\rightmargin}{0.1\textwidth}%
+                  }%
+         \item[]%
+         \begin{picture}(0,0)%
+         \put(-15,-5){\makebox(0,0){\scalebox{3}{\textcolor{quotemark}{``}}}}%
+         \end{picture}%
+         \begingroup\itshape}%
+ %%%%********************************************************************
+ \def\endfquote{%
+ \endgroup\par%
+ \makebox[0pt][l]{%
+ \hspace{0.8\textwidth}%
+ \begin{picture}(0,0)(0,0)%
+ \put(15,15){\makebox(0,0){%
+ \scalebox{3}{\color{quotemark}''}}}%
+ \end{picture}}%
+ \ifx\tempa\empty%
+ \else%
+    \ifx\tempc\empty%
+       \hfill\rule{100pt}{0.5pt}\\\mbox{}\hfill\tempa,\ \emph{\tempb}%
+   \else%
+       \hfill\rule{100pt}{0.5pt}\\\mbox{}\hfill\tempa,\ \emph{\tempb},\ \tempc%
+   \fi\fi\par%
+   \vspace{0.5em}%
+ \end{list}%
+ }%
+ \makeatother
+ %%%%********************************************************************
+
+ \usepackage{afterpage}
+
+\newcommand\blankpage{%
+    \null
+    \thispagestyle{empty}%
+    \addtocounter{page}{-1}%
+    \newpage}
+    
+\renewcommand{\listalgorithmcfname}{Liste des algorithmes}
+\usepackage{polyglossia}
+\setmainlanguage{french}
+\setotherlanguage{arabic}
+\newfontfamily\arabicfont[Script=Arabic,Scale=1]{Amiri}
+
+\newcommand{\mychapter}[2]{
+    
+    \chapter*{#2}
+    \addcontentsline{toc}{chapter}{#2}
+}
+
+\usepackage[page,toc,titletoc,title]{appendix}
+
+\addto\captionsfrench{%
+  \renewcommand\appendixname{Annexe}
+  \renewcommand\appendixpagename{Annexes}
+  \renewcommand{\appendixtocname}{Annexes}
+}
+\usepackage{etoolbox}
+\appto\appendix{\addtocontents{toc}{\protect\setcounter{tocdepth}{0}}}
+
+% reinstate the correct level for list of tables and figures and algorithms
+\appto\listoffigures{\addtocontents{lof}{\protect\setcounter{tocdepth}{1}}}
+\appto\listoftables{\addtocontents{lot}{\protect\setcounter{tocdepth}{1}}}
+\appto\listofalgorithms{\addtocontents{loa}{\protect\setcounter{tocdepth}{1}}}
+\usepackage{booktabs} % Add this line
+
+\usepackage{pifont}
+\usepackage{graphicx}
+\begin{document}
+
+
+% \includepdf[pages=-]{images_pfe/00-Page-de-garde-Mouhcine.pdf}
+\import{./}{00-Page-de-garde}
+
+%\includepdf[pages=-]{00-Page-de-garde.pdf}
+\pagenumbering{Roman}
+%\include{01-Dedicace}
+%\include{02-Remerciements}
+\include{03-Resume}
+\clearpage
+\renewcommand{\cftpartleader}{\cftdotfill{\cftdotsep}} 
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}} 
+\newcommand{\threechecks}{\ding{51}\ding{51}\ding{51}}
+\newcommand{\twochecks}{\ding{51}\ding{51}\ding{55}}
+\newcommand{\onecheck}{\ding{51}\ding{55}\ding{55}}
+\newcommand{\nocheck}{\ding{55}\ding{55}\ding{55}}
+    \tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+
+\clearpage
+%\include{04-Acronymes}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Content of the report and references %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\cleardoublepage
+
+\pagenumbering{arabic}
+\include{05-Introduction}
+\include{06-Art}
+\include{07-Existant}
+\include{08-Besoins}
+%\include{09-Conception}
+%\include{10-Realisation}
+\include{11-Conclusion}
+\include{bib}
+%choix du style de la biblio
+
+%\printbibliography[nottype=misc,title={Bibliographie}]
+ 
+%\printbibliography[type=misc,title={Webographie}]
+
+
+
+
+
+\appendix
+\appendixpage
+\input{12-Annexe.tex}
+
+
+\clearpage
+\thispagestyle{empty}
+
+
+\end{document}

@@ -1,0 +1,411 @@
+\chapter{Compréhension des scènes RADAR}\label{chap:4}
+\section{Introduction}
+La compréhension des scènes RADAR est un sujet qui en est à ses débuts, mais avec un grand potentiel or le radar compense les points faibles des autres capteurs. Les données RADAR sont sous formes d'un tenseur RAD, on a traité dans le chapitre précédent le problème d'annotation de ces données ainsi que les différents types d'annotations présenté. L'annotation à boite englobante n'est pas assez convenable pour ce type de tâches, car les données Radar sont assez différents que les images issue d'une caméra, les points réfléchit par les objets sont assez distants et les signatures des objets sont assez distincts, d'où l'utilisation de la segmentation sémantique dans ce projet. 
+
+Dans ce chapitre, on introduit une méthode d'apprentissage supervisé profonde pour la segmentation sémantique des données RADAR, on montre l'architecture du modèle ainsi que les fonctions de pertes adaptées pour les représentations du tenseur RAD.
+\section{La segmentation sémantique des scènes RADAR}
+\subsection{Exemples des modèles}
+Dans cette section on présente plusieurs méthodes utilisé pour la segmentation sémantique dans la littérature, ces derniers sont choisis car il existe des mesures de leurs performances dans le cas des données RADAR. 
+\begin{enumerate}
+  \item Architectures destiné aux images : 
+  \begin{itemize}
+    \item Réseaux entièrement convolutifs (FCN) : Dans \cite{46}, Long et al. proposent FCN, une architecture totalement basé sur les couches convolutifs (Convolution, compression et après convolution transposé), la représentation finale est traité une couche convolutif unidimensionnelle avec la fonction d'activation Softmax, afin de classifier chaque pixel, plusieurs versions de cette architecture est utilisé sur les données RADAR, l'architecture FCN-8s présente les meilleurs résultats. 
+    \item U-Net : L'architecture U-Net \cite{47} est composé de voies de compression et décompression à profondeur égale. Ce modèle est utilisé à l'origine pour les images médicales, il est particulièrement bien adapté à la segmentation des petits objets.
+    \item DeepLabv3+ \cite{48} est un modèle basé sur le prince des auto-encodeurs pour la segmentation des images naturels. Les auteurs proposent la couche pyramides spatiales à convolutions dilatées ASPP (qu'on va détailler dans la sous-section suivante).
+    \item Dans \cite{32} Zhang et al., proposent une architecture qui combine l'architecture ResNet-101 \cite{51} comme extracteur de caractéristiques (Backbone) et une tête basé sur YOLO (décodage) \cite{26}, on détaillera brièvement cette architecture dans la sous-section prochaine.
+  \end{itemize}
+  \item Architectures destiné aux données RADAR : 
+  \begin{itemize}
+    \item Gao et al. \cite{49} proposent une architecture à multiple perspectives des données RADAR (RAMP-CNN), pour la détection des objets dans la représentation RA. Les vues 2D extraites du tenseur RAD, sont traité par des auto-encodeurs à convolutions tri-dimensionnelles. RAMP-CNN atteints des performances intéressantes.
+    \item Arthur et al. \cite{50} proposent TMVA-NET, une architectures qui rassemblent les qualités de traitement dans la base temporaire présenté dans RAMP-CNN \cite{49}, en plus l'avantage de la couche pyramides spatiales à convolutions dilatées ASPP utilisé dans DeepLabv3+ par l'équipe des chercheurs de google \cite{48}. Ainsi les résultats présenté par cette architecture présente plus ou moins l'état de l'art à un nombre de paramètres inférieure aux autres architectures.
+  \end{itemize}
+\end{enumerate}
+\subsection{Méthodes et outils}
+\textbf{Convolution :} Mathématiquement, une convolution est une fonction d'intégration qui exprime le degré de recouvrement d'une fonction g lorsqu'elle est décalée par rapport à une autre fonction f.
+Intuitivement, une convolution agit comme un mixeur qui mélange une fonction avec une autre pour réduire l'espace de données tout en préservant l'information. Il existes plusieurs types de couches convolutifs; 
+
+\textbf{Les couches de convolution 1D} sont utilisés pour extraire les sous-séquences 1D locales des séquences d'entrée et identifier les motifs locaux dans la fenêtre de convolution.
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{tikzconv.pdf}
+\end{figure}
+
+\textbf{Les couches de convolution 2D}, l'idée principale est que le filtre convolutif se déplace dans deux directions (x,y) pour calculer les caractéristiques de faible dimension à partir des données de l'image. La forme de sortie est également une matrice à 2 dimensions.
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.7\textwidth]{tikzconv2d.pdf}
+\end{figure}
+
+\textbf{Les couches de convolutions 3D} appliquent un filtre tri-dimensionnel qui se déplace dans 3-axes  (x,y,z) afin de calculer les représentations des caractéristiques de bas niveau.\footnote{Dans notre cas on force une dimension temporelle à nos données, en empilant 5 vues (RD ou RA) dans le troisième axe.}
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{3dconv.jpg}
+\end{figure}
+
+\textbf{Convolution ponctuelle dilatée} : La convolution ponctuelle permet d’obtenir une convolution dilatée (ou “à trous”, atrous convolution en anglais) en ajoutant un taux de dilatation r, qui définit l'espacement entre les cellules du noyau. Celui-ci permet d'augmenter la taille du noyau, donc le champ récepteur, sans avoir à traiter trop de pixels. Des gains de vitesse considérables sans perte de précision en résultent.
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{atrous_convolution.png}
+\end{figure}
+
+\textbf{Convolution transposé 2D} : (par abus de language on dit "déconvolution"); Contrairement à la convolution normale qui réduit les éléments d'entrée via le noyau, la convolution transposée diffuse les éléments d'entrée via le noyau, produisant ainsi une sortie plus grande que l'entrée. 
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.8\textwidth]{transconv.pdf}
+\end{figure}
+
+\textbf{Max pooling 2D}: La mise en commun maximale (Max Pooling) est une opération de mise en commun qui calcule la valeur maximale des parcelles d'une carte d'entités et l'utilise pour créer une carte d'entités sous-échantillonnée (mise en commun). Elle est généralement utilisée après une couche convolutive. Il ajoute une petite invariance de traduction, ce qui signifie qu'une petite translation de l'image n'affecte pas de manière significative les valeurs de la plupart des sorties regroupées.
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{maxpool.png}
+\end{figure}
+
+
+\textbf{Couche pyramides spatiales à convolutions dilatées ASPP :} Comme on a vue dans la partie concernant la \textbf{Convolution ponctuelle dilatée}, cette opération réduit dramatiquement le taux de calcul on tirant un ensemble assez bien de caractéristiques, l'idée de l'ASPP est de combiner plusieurs couches de convolution ponctuelle à différents dilations, pour capturer des informations contextuelles à plusieurs échelles. En utilisant différents taux de dilatation, le ASPP permet au réseau d'avoir accès à des informations à différentes échelles, ce qui est crucial pour capturer des objets de différentes tailles dans une image. Cela permet au réseau d'avoir une compréhension plus complète de la scène. Il a été démontré que l'ASPP améliore la précision de la segmentation dans diverses tâches de compréhension d'images. En capturant des informations contextuelles multi-échelles et en augmentant le champ réceptif, l'ASPP permet au réseau de mieux distinguer les différents objets et d'attribuer avec précision des étiquettes de classe à chaque pixel. Cela peut conduire à des résultats de segmentation plus précis et plus détaillés. \cite{48}
+
+\textbf{Auto-encodeurs (codeur-décodeur)}:Les réseaux codeur-décodeur ont été appliqués avec succès à de nombreuses tâches de vision par ordinateur, notamment l'estimation de la pose humaine \cite{52}, la détection d'objets et la segmentation sémantique. En général, les réseaux codeur-décodeur contiennent un module codeur qui réduit progressivement les cartes de caractéristiques et capture des informations sémantiques plus importantes, et un module décodeur qui récupère progressivement les informations spatiales. 
+
+\begin{figure}[hbt!]
+  \centering
+  \begin{minipage}[b]{0.5\textwidth}
+      \includegraphics[width=\textwidth]{ASPP.png}
+      \caption{Architecture avec ASPP}
+  \end{minipage}
+  \begin{minipage}[b]{0.45\textwidth}
+    \includegraphics[width=\textwidth]{encoderdecoder.png}
+    \caption{Un auto-encodeur}
+\end{minipage}
+\end{figure}
+\subsection{L'architecture RAMP-CNN}\label{sec:423}
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=\textwidth]{RAMP.png}
+  \caption{Le modèle RAMP-CNN \cite{49}}
+  \label{fig:43}
+\end{figure}
+Comme montré dans la figure \ref{fig:43}, le modèle implémente 3 auto-encodeurs (CAE) qui servent à tirer les caractéristiques des trois Représentation RA, RD, AD. Un module de fusion des sorties de chaque décodeur afin de combiner les caractéristiques dans une représentation qui ressemble à la vue Portée Angle (RA). Le premier CAE traite les séquences des vues RA avec des couches de convolution 3D et des couches de convolution transposées. Ces opérations de convolution 3D tirent parti non seulement des motifs spatiaux de l'objet dans une seule image, mais aussi des informations temporelles qui contient le changement des motifs spatiaux entre les images. Certains aspects des motifs spatiaux, comme la distribution de l'intensité de la réflexion, contribuent directement à la reconnaissance des objets, par exemple, les objets de grande taille (véhicules) contiennent plus de réflecteurs plus puissants que les petits objets.
+\subsection{L'architecture DeepLabv3+}
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.7\textwidth]{deeplab.png}
+  \caption{Module ASPP \cite{48}}
+\end{figure}
+Le module ASPP consiste en : 
+\begin{itemize}
+  \item une convolution 1×1 pour garder l'information de la carte de caractéristique utile pour que le réseau discrimine certaines structures ; de trois convolutions 3×3 en parallèle avec des taux de dilatation respectivement égaux à 6, 12, 18, et un pas de sortie égal à 16 permettant de capturer le contexte à différentes échelles, ces valeurs sont les meilleurs trouvés empiriquement dans l’article \cite{53}.
+  \item un sous-échantillonnage de la carte pour lisser les contours et mettre en avant des caractéristiques larges.
+  \item la concaténation des cartes de caractéristiques résultantes.
+  \item une convolution 1×1 de réduction du nombre de cartes de caractéristiques à 256.
+  \item enfin, un sur-échantillonnage de la taille de la carte de caractéristique à celle de l’image finale.
+\end{itemize}
+\newpage
+\subsection{L'architecture RadarResNet}
+
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=\textwidth]{Raddet.png}
+  \caption{Architecture RadarResNet \cite{32}}
+\end{figure}
+
+Le modèle est une adaptation du ResNet-101 \cite{50} et YOLO \cite{26} pour les données RADAR, en plus les auteurs introduits plusieurs modules d'améliorations tel que les couches d'Auto-Attention qui améliorent les performances des réseaux profonds comme démontré dans \cite{54}, et obtient des résultats intéressantes sur leurs bases de données RADDet \cite{32}.
+
+\subsection{L'architecture TMVA-Net}
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.8\textwidth]{teaser_schema.png}
+  \caption{Réseau temporel multi-vues avec modules ASPP (TMVA-Net) \cite{50} }
+  \label{fig:46}
+\end{figure}
+Dans \cite{50}, Arthur et al. développent trois architectures de réseaux neuronaux légers, qui sont conçues spécifiquement pour la segmentation sémantique des radars à vues multiples, et leur idée générale est illustrée à la figure \ref{fig:46}. Ils traitent les vues radar avec des encodeurs spécialisés utilisant une pile temporelle comme entrée. 
+Différents décodeurs prévoient des cartes de segmentation sémantique pour chaque vue de sortie à partir des cartes de caractéristiques fusionnées dans un espace latent partagé.
+Par conséquent, il existe des composants de réseau spécifiques pour chaque vue, ainsi qu'un nombre raisonnable de paramètres dans l'ensemble.
+
+Or notre modèle partagent les points forts de chacune de ces architectures, on détaillera ces points lors de la présentation de notre architecture dans la prochaine section.
+
+\section{L'architecture proposé}
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=\textwidth]{tikz.pdf}
+  \caption{Réseau temporel avec modules ASPP pour la segmentation des vues RA et RD}
+  \label{fig:your_label}
+  \end{figure}
+On propose une architecture basé sur un double codeur-décodeur, or chaque couple est destiné pour une vue RADAR spécifique (RD ou RA), et qui prédis simultanément la segmentation de ces deux vues. On implémente deux couches de convolutions 3D, comme expliqué dans la sous-section \ref{sec:423}, le domaine temporelle est très intéressant dans notre cas, or les tâches spatiales que chaque objet laisse peuvent aider à bien les classifier. Ainsi la forme des données RA est (256x256x5) et RD (256x64x5).
+
+On élimine la vue AD car on cherche à diminuer le nombre des paramètres entraînable du modèle, en plus qu'on peut la déduire directement des deux vues RD et RA et on se restreint à utiliser deux blocs de convolution 3D, au lieu de toutes l'architecture, car ces derniers demande un nombre assez grand de paramètres.
+
+Après les deux blocs de convolution 3D, leurs normalisation par lots et couches d'activations, on introduit une couche de sous-échantillonnage (Max pooling) selon l'axe de portée et angle (l'axe doppler est déjà petit, on le laisse comme il est). Les cartes de caractéristiques obtenues sont traité par des couches de convolution 1D et empilés dans un espace latent commun. Les caractéristiques de l'espace latent partagé sont ensuite traitées avec des couches de convolution 1D et utilisées avec les caractéristiques à multi-échelles générés par les modules ASPP comme entrée de chaque décodeur. Deux décodeurs prédisent respectivement les cartes de segmentation sémantique RD et RA. Chacun est composé de deux blocs avec deux séquences de couches de convolution, de normalisation par lots et d'activation. L'échantillonnage ascendant entre les blocs est réalisé par des convolutions transposés. Une convolution 1D finale combine les sorties de chaque décodeur pour générer K cartes de caractéristiques, où K est le nombre de classes. Une opération de softmax est ensuite appliquée par pixel aux K cartes de caractéristiques pour générer des masques doux.
+\section{Fonctions de pertes}
+L'objectif de la segmentation sémantique RADAR multi-vues est de segmenter simultanément de nombreuses vues du tenseur RAD agrégé. Il est évident qu'un certain degré de cohérence doit être maintenu entre les vues segmentées, car les éléments que nous voulons détecter sont visibles dans les différentes perspectives RADAR. Par exemple, un cycliste ne doit pas être représenté dans une vue alors qu'un piéton l'est dans une autre. Pour que les prédictions du modèle restent cohérentes, une perte de cohérence (Coherence Loss, CoL) est mise en œuvre.
+Dans \cite{25}, les auteurs démontrent la procédure de calcul de cette fonction. Dans cette section on détaillera tous les fonctions utilisé dans ce projet.
+
+On note $f_\theta (x) = p $ un modèle de segmentation à paramètres $\theta$, entrée $x$ et sortie $p$. Entraîner le modèle correspond à minimiser une fonction de pertes décrivant le modèle. Or notre modèle est à principe de multi-vues, l'entrée est sous la forme de $x=(x^{RA}, x^{RD})$, et la sortie est un masque lisse $p = (p^{RA}, p^{RD})$\footnote{$p^{RD}\in [0,1]^{B_R\cdot B_A\cdot K}$ avec $B_R$, $B_D$ les dimensions de la matrice RD et $K=4$ le nombre de classes à distinguer (Arriè4re-plan, voiture, cycliste, piéton). } pour les deux vues RD et RA. 
+
+\textcolor{blue}{\textbf{Cohérence}} : Soit $(p^{RA},p^{RD}) $ les cartes de segmentation prédites par le modèle. Ces deux matrices sont agrégé par l'opérateur $max(.)$ au long de l'axe non partagé (Angle ou Doppler). Les deux matrices résultantes noté $\tilde{p}^{RA}$ et $\tilde{p}^{RD}$,comprennent la plus grande probabilité de chaque point de l'axe Portée pour chaque classe, c-à-d ils indiquent si le modèle prédit une forte probabilité d'observer une catégorie à une distance donnée.
+La perte de cohérence est l'erreur quadratique moyenne entre les vecteurs de probabilité maximale (portée), l'extension de cette opération pour le cas des matrices est la norme de Frobenius (voire Annexe \ref{sec:B5}). Le but de cette fonction est d'encourager le modèle à prédire les grandes probabilité à la même distance et pour la même classe pour les deux vues. 
+La fonction de pertes à cohérence CoL dans l'interval [0,1] est définie comme : 
+\begin{equation}
+  \mathcal{L}_{CoL} (p^{RA},p^{RD})= \frac{1}{\mathcal{B}_R \cdot K} \Vert\tilde{p}^{RA}-\tilde{p}^{RD} \Vert_F ^2
+\end{equation}
+Avec $\Vert \cdot \Vert_F $ la norme de Frobenius.
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=0.7\textwidth]{CoL.png}
+  \caption{Méthode de calcul des pertes de cohérence.\cite{25}}
+\end{figure}
+
+\textcolor{blue}{\textbf{Dice}} : Une autre fonction de perte pour les tâches de segmentation d'images est basée sur le coefficient de Dice, qui est essentiellement une mesure du superposition entre deux échantillons. Cette mesure varie de 0 à 1, un coefficient de Dice de 1 indiquant une superposition parfaite et complète. Le coefficient Dice \cite{55} a été développé à l'origine pour les données binaires et peut être calculé comme suit :
+\begin{equation}
+  Dice=\frac{2\vert A \cap B \vert }{\vert A \vert + \vert B \vert}
+\end{equation}
+Où $\vert A \cap B \vert$ représente les éléments communs entre les ensembles A et B, $\vert A \vert$ représente le nombre d'éléments de l'ensemble A (et de même pour l'ensemble B).
+
+Dans le cas de l'évaluation d'un coefficient de Dice sur des masques de segmentation prédits, nous pouvons faire l'approximation de $\vert A \cap B \vert$  en multiplication par éléments entre le masque de prédiction et le masque cible, puis faire la somme de la matrice résultante.
+\begin{figure}[hbt!]
+  \centering
+  \includegraphics[width=\textwidth]{DICEnom.png}
+\end{figure}
+
+Pour quantifier $\vert A \vert$ et $\vert B \vert$, certains chercheurs utilisent la somme simple tandis que d'autres préfèrent utiliser la somme quadratique pour ce calcul. En outre, il y a un 2 au numérateur dans le calcul du coefficient de Dice car notre dénominateur "compte deux fois" les éléments communs aux deux ensembles. Afin de formuler une fonction de pertes qui peut être minimisée, nous utiliserons simplement $1-Dice$. Cette fonction de pertes est connue sous le nom de pertes de Dice douce car nous utilisons directement les probabilités prédites au lieu de les seuiller et de les convertir en un masque binaire. Le coefficient devient : 
+
+\begin{equation}
+  Dice = \frac{2\sum_{pixels}y_{v}y_{p}}{\sum_{pixels}y_{v}^2 + \sum_{pixels}y_{p}^2}
+\end{equation}
+Avec $y_v$ les bases de vérités, $y_p$ les prédictions du modèle. On effectue ce calcul pour chaque classe d'objet et on prend la moyenne, ainsi la fonction de pertes Dice est formulé comme suivant : 
+
+\begin{equation}
+\mathcal{L}_{SDice} = \frac{1}{K} \sum_{k=1}^{K} \left[ 1 - \frac{2\sum_{(m,n)}y[m,n,k]p[m,n,k]}{\sum_{(m,n)}y[m,n,k]^2+\sum_{(m,n)}p[m,n,k]^2}\right]
+\end{equation}\label{eqn:44}
+
+Où $y\in \{0,1\}^{B_M\cdot B_N \cdot K}$ la base de vérité, $f_\theta (x) = p \in [0,1]^{B_M\cdot B_N \cdot K}$ la prédiction associé, avec $B_M\cdot B_N $ les dimensions de la vue x. 
+
+\textcolor{blue}{\textbf{Entropie croisée pondérée (wCE)}} : Les modèles de segmentation sémantique qui prédisent un score pour chaque classe à chaque pixel sont généralement formés en minimisant une fonction de perte à entropie croisée (CE). Cette perte n'est pas idéale pour les tâches de segmentation déséquilibrées telles que la segmentation sémantique RADAR, car le processus d'optimisation a tendance à se concentrer sur les classes les plus représentées. Dans le cas présent, le bruit d'arrière plan domine par rapport aux signatures des objets que nous souhaitons détecter. 
+
+Dans le même espace que l'équation \ref{eqn:44}, on formule l'équation de pertes à entropie croisée pondérée : 
+\begin{equation}
+  \mathcal{L}_{wCE}(y,p)= -\frac{1}{K} \sum_{k=1}^{K} w_k \sum_{(m,n)}y[m,n,k] \log p[m,n,k]
+\end{equation}
+Avec $w_k$ des poids positives normalisées. Le poids $w_k$ est inversement proportionnel à la fréquence de la classe k dans l'ensemble de données d'entraînement. 
+\begin{equation}
+  w_k \varpropto (\sum_y \sum_{(m,n)} y[m,n,k])^{-1}
+\end{equation}
+En termes plus simples, le poids attribué à la classe k sera plus important s'il y a moins d'échantillons d'apprentissage avec cette classe particulière. En effet, le poids augmente pour compenser la rareté des échantillons et garantir que le modèle accorde plus d'attention à la classe la moins représentée au cours de la formation. Inversement, si une classe est plus abondante dans l'ensemble d'apprentissage, son poids sera plus faible car elle nécessite moins d'attention pendant l'apprentissage.
+
+\textcolor{blue}{Pertes globales} : La perte d'entropie croisée (CE) est spécialisée dans la classification par pixel et ne tient pas compte des corrélations spatiales entre les prédictions. Le Dice est particulièrement efficace pour la segmentation des formes, mais il est difficile de l'optimiser en tant que fonction de perte unique en raison de sa formulation en gradient. Enfin, la CoL est utile lorsque ni la CE ni la Dice ne sont en mesure de tirer parti de la cohérence entre la prédiction des vues RD et RA. Pour combiner les différentes points forts de ces pertes, une perte globale est utilisé pour la segmentation à multi-vues :
+\begin{equation}
+  \mathcal{L} = \lambda_{wCE}(\mathcal{L}_{wCE}^{RA}+\mathcal{L}_{wCE}^{RD})+\lambda_{Dice}(\mathcal{L}_{Dice}^{RA}+\mathcal{L}_{Dice}^{RD})+\lambda_{CoL}\mathcal{L}_{CoL}
+\end{equation}
+$\lambda_{wCE}$, $\lambda_{Dice}$ et $\lambda_{CoL}$ sont des facteurs de pondération fixés à partir du travail du propriétaire de la base de données \cite{25}, or ils l'ont choisis d'une manière empirique.
+
+\section{Expériences sur CARRADA}
+\subsection{Procédure d'entraînement}
+À cause des contraintes temporelles de ce projet, les résultats sont issues de l'ensemble des données CARRADA-VAL et le modèle est entraîné sur la partie CARRADA-Train, CARRADA-Test n'est pas utilisé dans cette version du rapport. À chaque instant de la séquence du RADAR, le tenseur RAD est traité comme montré dans la section \ref{sec:225}. 
+
+Pour chaque image, un nombre d'images antérieure sont considéré dans la phase d'entraînement, or notre modèle à une entrée temporelle (Convolution 3D), on choisie 4 images (suffisant pour constater n'importe quel changement spatio-temporel).
+
+On utilise l’Optimiseur ADAM\footnote{On utilise les paramètres recommandé ($\beta_1=0.9$, $\beta_2=0.999$ et $\epsilon = 10^{-8}$)} \cite{56}, qui est un algorithme d'optimisation couramment utilisé dans l'apprentissage automatique et l'apprentissage profond pour la formation des réseaux neuronaux. Il s'agit d'une extension de la méthode d'optimisation par descente stochastique du gradient (SGD) qui combine les avantages des taux d'apprentissage adaptatifs et des mises à jour basées sur le momentum.
+Le nom "Adam" signifie "Adaptive Moment Estimation", ce qui renvoie aux principales caractéristiques de l'optimiseur. L'algorithme suit un taux d'apprentissage adaptatif pour chaque paramètre du réseau et maintient une moyenne de décroissance exponentielle des gradients passés et des gradients au carré. En général, l'optimiseur Adam est largement utilisé en raison de sa capacité à converger rapidement, à gérer efficacement les gradients épars et à nécessiter moins de réglages manuels des hyperparamètres que les méthodes d'optimisation traditionnelles telles que SGD. \footnote{On présente dans l'annexe (Tableau \ref{tab:B6}) les différents paramètres d'entraînement et quelques résultats quantitatives}
+
+L'entraînement utilise la bibliothèque Pytorch (Python), qui dispose d'un backend C++ qui gère les opérations de bas niveau et les optimisations. L'implémentation C++ de PyTorch est responsable de l'efficacité des calculs tensoriels, de l'accélération GPU et de l'interface avec d'autres bibliothèques C++ pour les calculs numériques, on utilise une seul carte graphique Geforce GTX 1060.
+
+\textbf{En raison des contraintes de temps inhérentes à ce projet, il n'a pas été possible de procéder à une exploration complète et à un réglage fin des hyperparamètres à l'aide d'une méthode d'essai et d'erreur. Par conséquent, les résultats présentés sont basés sur une seule exécution du modèle avec des hyperparamètres sélectionnés de manière pseudo-aléatoire. Bien que ces résultats fournissent un aperçu précieux et représentatif des performances du modèle, il est important de noter qu'ils peuvent ne pas refléter les performances maximales du modèle. L'optimisation limitée des hyperparamètres introduit des biais potentiels et limite la capacité à capturer les meilleurs résultats possibles. Néanmoins, les résultats présentés dans cette étude offrent une compréhension significative du travail et mettent en évidence les forces et les faiblesses du modèle, guidant ainsi l'identification des domaines clés pour les futurs efforts d'optimisation.}
+\subsection{Résultats et comparaison}
+
+% Please add the following required packages to your document preamble:
+% \usepackage{multirow}
+% \usepackage{graphicx}
+% Please add the following required packages to your document preamble:
+% \usepackage{multirow}
+% \usepackage{graphicx}
+% \usepackage[table,xcdraw]{xcolor}
+% If you use beamer only pass "xcolor=table" option, i.e. \documentclass[xcolor=table]{beamer}
+\begin{table}[hbt!]
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{ccccccccccccc}
+  \hline
+                                 &                                          &                                                                                               & \multicolumn{5}{c}{\textbf{IoU (\%)}}                                                                                                                                                                                                                             & \multicolumn{5}{c}{\textbf{Dice (\%)}}                                                                                                                                                       \\ \cline{4-13} 
+  \multirow{-2}{*}{\textbf{Vue}} & \multirow{-2}{*}{\textbf{Méthode}}       & \multirow{-2}{*}{\textbf{\begin{tabular}[c]{@{}c@{}}Nombre \\ paramètres\\ (M)\end{tabular}}} &\multicolumn{1}{l}{A-P} & \multicolumn{1}{l}{Pié}     & \multicolumn{1}{l}{Cycl}                            & \multicolumn{1}{l|}{Voitu}                                               & \multicolumn{1}{l|}{mIoU}                                                & \multicolumn{1}{l}{A-P} & \multicolumn{1}{l}{Pié}                             & \multicolumn{1}{l}{Cycl}    & \multicolumn{1}{l|}{Voitu}                       & \multicolumn{1}{l}{mDice}   \\
+  \\
+  
+                                 & FCN-8s                                   & 134.3                                                                                         & 99.7                    & 47.7                        & 18.7                                                & \multicolumn{1}{c|}{52.9}                                                & \multicolumn{1}{c|}{54.7}                                                & 99.8                    & 24.8                                                & 16.5                        & \multicolumn{1}{c|}{26.9}                        & 66.3                        \\
+                                 & U-Net                                    & 17.3                                                                                          & 99.7                    & {\color[HTML]{FFC702} 51.0} & {\color[HTML]{009901} 33.4}                         & \multicolumn{1}{c|}{37.7}                                                & \multicolumn{1}{c|}{\cellcolor[HTML]{FFFFFF}{\color[HTML]{FFC702} 55.4}} & 99.8                    & \cellcolor[HTML]{FFFFFF}{\color[HTML]{FFC702} 67.5} & {\color[HTML]{009901} 50.0} & \multicolumn{1}{c|}{54.7}                        & 68.0                        \\
+                                 & DeepLabv3+                               & 59.3                                                                                          & 99.7                    & 43.2                        & 11.2                                                & \multicolumn{1}{c|}{49.2}                                                & \multicolumn{1}{c|}{50.8}                                                & 99.9                    & 60.3                                                & 20.2                        & \multicolumn{1}{c|}{66.0}                        & 61.6                        \\
+                                 & RSS-Net                                  & 10.1                                                                                          & 99.3                    & 0.1                         & 4.1                                                 & \multicolumn{1}{c|}{25.0}                                                & \multicolumn{1}{c|}{32.1}                                                & 99.7                    & 0.2                                                 & 7.9                         & \multicolumn{1}{c|}{40.0}                        & 36.9                        \\
+                                 & RAMP-CNN                                 & 106.4                                                                                         & 99.7                    & 48.8                        & 23.2                                                & \multicolumn{1}{c|}{{\color[HTML]{009901} 54.7}}                         & \multicolumn{1}{c|}{56.6}                                                & 99.9                    & 65.6                                                & 37.7                        & \multicolumn{1}{c|}{{\color[HTML]{009901} 69.6}}                        & {\color[HTML]{FFC702} 68.5} \\
+                                 & TMVA-Net*                                 & 5.6                                                                                           & 99.7                    & {\color[HTML]{009901} 52.6} & \cellcolor[HTML]{FFFFFF}{\color[HTML]{FFC702} 29.0} & \multicolumn{1}{c|}{\cellcolor[HTML]{FFFFFF}{\color[HTML]{FFC702} 53.4}} & \multicolumn{1}{c|}{{\color[HTML]{009901} 58.7}}                         & 99.8                    & {\color[HTML]{009901} 68.9}                         & {\color[HTML]{FFC702} 45.0} & \multicolumn{1}{c|}{{\color[HTML]{FFC702} 69.6}} & {\color[HTML]{009901} 70.9} \\
+  \multirow{-7}{*}{\textbf{RD}}  & \cellcolor[HTML]{C0C0C0}TRAD-Seg* (notre) & {\color[HTML]{32CB00}4.1 }                                                                  & 99.6                    & 19.2                        & 23.2                                                & \multicolumn{1}{c|}{51.9}                                                & \multicolumn{1}{c|}{48.4}                                                & 99.8                    & 32.2                                                & 37.6                        & \multicolumn{1}{c|}{ 68.3} & 59.5                        \\ \hline
+                                 & FCN-8s                                   & 134.3                                                                                         & 99.8                    & 14.8                        & 0.0                                                 & \multicolumn{1}{c|}{23.3}                                                & \multicolumn{1}{c|}{34.5}                                                & 99.9                    & 25.8                                                & 0.0                         & \multicolumn{1}{c|}{37.8}                        & {\color[HTML]{FFC702} 40.9} \\
+                                 & U-Net                                    & 17.3                                                                                          & 99.8                    & {\color[HTML]{FFC702} 22.4} & {\color[HTML]{009901} 8.8}                          & \multicolumn{1}{c|}{0.0}                                                 & \multicolumn{1}{c|}{32.8}                                                & 99.9                    & {\color[HTML]{FFC702} 36.6}                         & {\color[HTML]{009901} 16.1} & \multicolumn{1}{c|}{0.0}                         & 38.2                        \\
+                                 & DeepLabv3+                               & 59.3                                                                                          & 99.9                    & 3.4                         & 5.9                                                 & \multicolumn{1}{c|}{21.8}                                                & \multicolumn{1}{c|}{32.7}                                                & 99.9                    & 6.5                                                 & 11.1                        & \multicolumn{1}{c|}{35.7}                        & 38.3                        \\
+                                 & RSS-Net                                  & 10.1                                                                                          & 99.8                    & 7.3                         & 5.6                                                 & \multicolumn{1}{c|}{15.8}                                                & \multicolumn{1}{c|}{32.1}                                                & 99.8                    & 13.7                                                & 10.5                        & \multicolumn{1}{c|}{27.4}                        & 37.8                        \\
+                                 & RAMP-CNN                                 & 106.4                                                                                         & 99.8                    & 1.7                         & 2.6                                                 & \multicolumn{1}{c|}{7.2}                                                 & \multicolumn{1}{c|}{27.9}                                                & 99.9                    & 3.4                                                 & 5.1                         & \multicolumn{1}{c|}{13.5}                        & 30.5                        \\
+                                 & TMVA-Net*                                 & 5.6                                                                                           & 99.8                    & {\color[HTML]{009901} 26.0} & {\color[HTML]{FFC702} 8.6}                          & \multicolumn{1}{c|}{{\color[HTML]{009901} 30.7}}                         & \multicolumn{1}{c|}{{\color[HTML]{009901} 41.3}}                         & 99.9                    & {\color[HTML]{009901} 41.3}                         & {\color[HTML]{FFC702} 15.9} & \multicolumn{1}{c|}{{\color[HTML]{009901} 47.0}} & {\color[HTML]{009901} 51.0} \\
+  \multirow{-7}{*}{\textbf{RA}}  & \cellcolor[HTML]{C0C0C0}TRAD-Seg* (notre) & {\color[HTML]{32CB00}4.1 }                                                                   & 99.7                    & 4.4                         & 5.2                                                 & \multicolumn{1}{c|}{{\color[HTML]{FFC702} 28.4}}                         & \multicolumn{1}{c|}{{\color[HTML]{FFC702} 34.6}}                         & 99.8                    & 8.5                                                 & 9.9                         & \multicolumn{1}{c|}{{\color[HTML]{FFC702} 44.2}} & {\color[HTML]{FFC702} 40.9} \\ \hline
+  \end{tabular}%
+  }
+  \caption{Performances de la segmentation sémantique des données RADAR de la base de données CARRADA. Le nombre de paramètres de notre modèle et TMVA-Net (*) est pour les deux vues (Modèle à multi-vues) cependant pour les autres est un nombre par vue. Les performances sont évalués par la note IoU et Dice pour chaque classe et la moyenne des deux (mIoU et mDice). La meilleur note est en vert, la deuxième est en orange. Les 4 classes sont respectivement (Arrière-Plan, Piéton, cycliste, Voiture).}
+  \label{tab:46}
+  \end{table}
+
+D'après les résultats\footnote{Les résultats présenté dans cette table sont tiré de la thèse \cite{25} où l'auteur à entraîner les différents modèle sur la base de données CARRADDA\cite{6}.} présentés dans la table \ref{tab:46}, on remarque que notre modèle sous-adapté à bien performé dans la détection des voitures dans les deux vues (Cela est grace à la dimension temporelle or la première et la deuxième note est pour les deux modèles introduisant la convolution 3D), cependant il n'est pas assez adapté aux cyclists et piétons, ainsi qu'il est le modèle le plus légers, bien qu'il présente la deuxième moyenne Dice et IoU dans la vue RA.
+
+On présente dans les figures suivantes des mesures issues des fonctions de pertes globales et par vues, ainsi que des résultats qualitatives de notre modèle. 
+
+\newpage
+\begin{figure}[hbt!]
+  \centering
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{RA_dice.eps}
+    \caption{(1)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \includegraphics[width=\linewidth]{RA_MioU.eps}   
+   \caption{(2)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{RA_prec.eps}
+    \caption{(3)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+
+    \includegraphics[width=\linewidth]{RA_pixelrecall.eps}
+    \caption{(4)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{RAloss_CE.eps}
+    \caption{(5)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \includegraphics[width=\linewidth]{RAloss_glo.eps}
+    \caption{(6)}
+  \end{minipage}
+  \caption{Extrait des résultats de la phase d'entraînement de notre modèle sur la vue portée angle RA}
+  \label{fig:115}
+\end{figure}
+Dans les figures (1) et (2) on représente respectivement les coefficients Dice et mIoU en fonction des itérations d'apprentissage du modèle. Les figures (3) et (4) représentent respectivement la précision de segmentation d'un pixel et la précision de classification de ce dernier à un objet en fonctions des itérations d'apprentissage du modèle. Les figures (5) et (6) représentent respectivement les valeurs de la fonction de pertes d'entropie croisée et globale en fonction des itérations d'apprentissage du modèle.
+
+\newpage
+\begin{figure}[hbt!]
+  \centering
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{RD_dice.eps}
+    \caption{(1)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \includegraphics[width=\linewidth]{RD_MioU.eps}   
+   \caption{(2)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{RD_prec.eps}
+    \caption{(3)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+
+    \includegraphics[width=\linewidth]{RD_pixelrecall.eps}
+    \caption{(4)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{RDloss_CE.eps}
+    \caption{(5)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \includegraphics[width=\linewidth]{RDloss_glo.eps}
+    \caption{(6)}
+  \end{minipage}
+  \caption{Extrait des résultats de la phase d'entraînement de notre modèle sur la vue portée doppler RD}
+  \label{fig:422}
+\end{figure}
+Dans les figures (1) et (2) on représente respectivement les coefficients Dice et mIoU en fonction des itérations d'apprentissage du modèle. Les figures (3) et (4) représentent respectivement la précision de segmentation d'un pixel et la précision de classification de ce dernier à un objet en fonctions des itérations d'apprentissage du modèle. Les figures (5) et (6) représentent respectivement les valeurs de la fonction de pertes d'entropie croisée et globale en fonction des itérations d'apprentissage du modèle.
+
+\newpage
+\begin{figure}[hbt!]
+  \centering
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{RAval_glo.eps}
+    \caption{(1)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \includegraphics[width=\linewidth]{RDval_glo.eps}   
+   \caption{(2)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{loss_coh.eps}
+    \caption{(3)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+
+    \includegraphics[width=\linewidth]{loss_glo.eps}
+    \caption{(4)}
+  \end{minipage}
+  \begin{minipage}{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{learning rate.eps}
+    \caption{(5) Variation du taux d'apprentissage en fonction du nombre d'itérations}
+    \label{fig:427}
+  \end{minipage}
+  \caption{Extrait des résultats de la phase de validation de notre modèle}
+  \label{fig:428}
+\end{figure}
+Les figures (1) et (2) représentent les pertes globales de validation respectivement de la vue RA et RD. Les figures (3) et (4) les pertes de cohérence et globales du modèle. La figure (5) représente le taux d'apprentissage en fonction des nombres d'itérations.
+
+\newpage
+\begin{figure}[hbt!]
+  \centering
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{individualImage.png}
+    \caption{(1)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \includegraphics[width=\linewidth]{individualImage (1).png}   
+   \caption{(2)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{individualImage (2).png}
+    \caption{(3)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+
+    \includegraphics[width=\linewidth]{individualImage (3).png}
+    \caption{(4)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{individualImage (4).png}
+    \caption{(5)}
+  \end{minipage}
+  \begin{minipage}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{individualImage (5).png}
+    \caption{(5)}
+  \end{minipage}
+  \caption{Résultats qualitatives de la segmentation du modèle, à gauche les bases de vérités, à droite la sortie de notre modèle (Vue RA)}
+  \label{fig:435}
+\end{figure}
+
+\section{Conclusion et perspectives }
+
+Dans cette section, une architecture légère est proposée pour la segmentation sémantique RADAR multi-vues et une combinaison de fonctions de pertes pour les entraîner. La méthode proposée localise et délimite les objets dans la scène RADAR tout en déterminant simultanément leur vitesse relative. Les expériences montrent que les informations provenant du tenseur RADAR et de son évolution temporelle sont importantes pour ces tâches.
+
+Comme montré dans la figure \ref{fig:428}, les pertes de validation n'ont pas convergé, or notre base de données est assez grande et augmenté, on peut dire que notre modèle est sous-adapté. Ce qui est normale car on n'a pas optimisé les hyperparamètres de notre modèle à cause des contraintes temporelles.
+
+On remarque qu'après 8000 itérations le changement dans les différents métriques stagnent, cela est due à l'approche de taux d'apprentissage décroissant, le but de l'utilisation de cette méthode est de réduire le taux de changement graduellement lorsque le modèle approche des paramètres optimales et preventer tout sur adaptation du modèle aux données d'entraînement. Mais dans notre cas comme présenté dans la table \ref{tab:B6}, on a assigné un taux d'apprentissage très petit au départ et son évolution devient plus petites comme montré dans la figure \ref{fig:427}, ce qui entraîne l'invariabilité des mesures après les 8000 itérations. La deuxième contrainte est le nombre  insuffisant des itérations, or pour 14000 itérations et avec l'accélération de la carte graphique, ça pris 5 jours et nuits. 
+
+Bien que tous ces contraintes notre modèle à bien performé au niveau de la détection des voitures dans les deux vues, pourtant pour les classes piétons et cyclists le résultat est médiocre. On peut opter pour une augmentation du coefficient de la fonction de pertes Dice (Ces deux classes ont une petites signatures (Faible RCS)), et analyser les résultats.
+
+Donc afin d'améliorer les résultats obtenues, on va revoir le nombres des époques et le taux d'apprentissage initiale. Ainsi qu'on va explorer les résultats de notre modèle dans des conditions urbaines complexes, afin de le bien évaluer dans des conditions réalistes. 
+
+Finalement, on est entrain d'essayer de changer la formule de pertes de cohérence, or la cohérence doit être établie entre les deux vues et la base de vérité.
